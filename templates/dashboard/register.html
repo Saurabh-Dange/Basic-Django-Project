@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+{% load appname_tags %}
+<h1>
+    <center>
+        This is registration page
+    </center>
+</h1>
+
+Name: <br>
+<input type="text" id="fname"><br>
+Mobile Number : <br>
+<input type="number" id="mno"><br>
+Gender:<br>
+Male: <input type="radio" name="gender" value="Male"><br>
+Female:<input type="radio" name="gender" value="Female"><br>
+Other: <input type="radio" name="gender" value="Other"><br>
+<input type="button" id="submit" value="SUBMIT">
+<input type="button" id="edit" value="EDIT" hidden>
+<input type="button" id="cancel" value="CANCEL" hidden>
+
+<p class="test"></p>
+<table id="table" class="hidden" border="1">
+    <tr>
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Mobile Number</th>
+            <th>Gender</th>
+            <th>Delete</th>
+            <th>Edit</th>
+
+        </tr>
+        </thead>
+        <tbody id="table-body">
+
+        {% for i in result %}
+            <tr>
+                <td id="na">
+                    {#                {{ i.name }}#}
+                </td>
+                <td>
+                    {#                {{ i.Mobile_num }}#}
+                </td>
+                <td>
+                    {#                {{ i.Gender }}#}
+                </td>
+                <td>
+                    {#                <button id='{{ i|mongo_id }}' class='botaoadd' name='delete'>delete</button>#}
+                </td>
+                <td>
+                    {#                <button id='{{ i|mongo_id }}' class='btupdate' name='update'>update</button>#}
+                </td>
+
+            </tr>
+        {% endfor %}
+        </tbody>
+</table>
+
+
+</body>
+
+<script type="text/javascript">
+    var obid1;
+
+    $("#submit").click(function (e) {
+        var fname = $("#fname").val();
+        var mno = $("#mno").val();
+        var gen = $('input[name=gender]:checked').val();
+
+        var datas = {
+            "Name": fname,
+            "Mobile_num": mno,
+            "Gender": gen,
+        };
+        store_table(datas)
+
+        get_my_table()
+    });
+
+    $("#table").on("click", ".btupdate", function (e) {
+        obid = $(this).attr('id')
+        $("#submit").hide()
+        $("#edit").show()
+        $("#cancel").show()
+        obid1 = obid
+        var d_update = {
+            "oid": obid,
+            "action": "get_entry"
+        }
+        $.ajax({
+            url: "/get_entry",
+            type: "POST",
+            data: d_update,
+            success: function (response) {
+                $("#fname").val(response[0]["name"])
+                $("#mno").val(response[0]["Mobile_num"])
+
+            },
+            error: function (response) {
+                console.log("This is after clicking edit button")
+
+            }
+
+        })
+
+
+    })
+
+    $("#cancel").click(function (e) {
+        $("#submit").show()
+        $("#edit").hide()
+        $("#cancel").hide()
+        $("#fname").val("")
+        $("#mno").val("")
+
+    })
+
+    $("#table").on("click", ".botaoadd", function (e) {
+        {#        $(this).parents("tr").remove();#}
+        obid = $(this).attr('id')
+
+        var d_delete = {
+            "oid": obid,
+            "action": "delete"
+        }
+        $.ajax({
+            url: "/delete",
+            type: "POST",
+            data: d_delete,
+            success: function (response) {
+                get_my_table()
+                console.log("this is after deleting record it will print the response from backend")
+                console.log(response)
+
+            },
+            error: function (response) {
+                console.log("This is error while deleting")
+            }
+        });
+        console.log("This is a object id of the row which is being deleted")
+        console.log(obid);
+    });
+
+    $(document).ready(function () {
+        get_my_table()
+    });
+
+
+    function get_my_table() {
+        $.ajax({
+            url: "/display",
+            type: "post",
+            success: function (response) {
+                $("#table-body").html("")
+                var txt = "";
+                for (var i = 0; i < response.length; i++) {
+                    txt += "<tr>  " +
+                        "<td>" +
+                        response[i]["name"] +
+                        "</td>" +
+                        "<td>" +
+                        response[i]["Mobile_num"] +
+                        "</td>" +
+                        "<td>" +
+                        response[i]["Gender"] +
+                        "<td>" +
+                        "<button id='" + response[i]["_id"] + "' class='botaoadd'>Delete</button>" +
+                        "</td>" +
+                        "<td>" +
+                        "<button id='" + response[i]["_id"] + "' class='btupdate'>Edit</button>" +
+                        "</td>" +
+                        "</tr>";
+
+                    if (txt != "") {
+                        $("#table-body").html("")
+
+                        $("#table-body").append(txt);
+                    }
+                }
+            },
+            error: function (response) {
+                alert("This is error while getting data table from backend")
+                //Do Something to handle error
+            }
+
+        });
+    }
+
+    function store_table(datas) {
+
+        $.ajax({
+            url: "/register",
+            type: "post",
+            data: datas,
+            success: function (response) {
+                console.log((response["name"]))
+                get_my_table()
+
+            },
+            error: function (response) {
+                alert("This is the error while storing the data in database")
+                //Do Something to handle error
+            }
+
+        });
+
+    }
+
+    $("#edit").click(function (e) {
+
+        var fname = $("#fname").val();
+        var mno = $("#mno").val();
+        var gen = $('input[name=gender]:checked').val();
+        var datas = {
+            "Name": fname,
+            "Mobile_num": mno,
+            "Gender": gen,
+            "_id": obid1,
+        }
+
+        $.ajax({
+            url: "/update",
+            type: "post",
+            data: datas,
+            success: function (response) {
+                console.log(response)
+                get_my_table()
+
+            },
+            error: function (response) {
+                alert("error")
+                //Do Something to handle error
+            }
+
+        });
+
+
+        console.log("After click event on submit");
+
+    })
+
+</script>
+</html>
